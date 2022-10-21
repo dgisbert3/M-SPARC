@@ -137,6 +137,36 @@ while(~feof(fid1))
 			end
 		end
 		textscan(fid1,'%s',1,'delimiter','\n','MultipleDelimsAsOne',0); % skip current line
+    elseif (strcmp(str,'ELEC_FIELD_TYPE:'))
+		C_param = textscan(fid1,'%s %s %s',1,'delimiter',' ','MultipleDelimsAsOne',1);
+		efx = char(C_param{1});
+		efy = char(C_param{2});
+        efz = char(C_param{3});
+        switch efx
+            case {'e','E','0','-'}
+                S.EF_TYPEx = 0; % External field (Freestanding or far-away capacitor)
+            case {'m','M'}
+                S.EF_TYPEx = 1; % Macroscopic field (Nearby capacitor)
+        end
+        switch efy
+            case {'e','E','0','-'}
+                S.EF_TYPEy = 0; % External field (Freestanding or far-away capacitor)
+            case {'m','M'}
+                S.EF_TYPEy = 1; % Macroscopic field (Nearby capacitor)
+        end
+        switch efz
+            case {'e','E','0','-'}
+                S.EF_TYPEz = 0; % External field (Freestanding or far-away capacitor)
+            case {'m','M'}
+                S.EF_TYPEz = 1; % Macroscopic field (Nearby capacitor)
+        end
+		textscan(fid1,'%s',1,'delimiter','\n','MultipleDelimsAsOne',0); % skip current line
+	elseif (strcmp(str,'ELEC_FIELD:'))
+		C_param = textscan(fid1,'%f %f %f',1,'delimiter',' ','MultipleDelimsAsOne',1);
+		S.EFx = C_param{1};
+		S.EFy = C_param{2};
+		S.EFz = C_param{3};
+		textscan(fid1,'%s',1,'delimiter','\n','MultipleDelimsAsOne',0); % skip current line
 	elseif (strcmp(str,'SPIN_TYP:'))
 		C_param = textscan(fid1,'%f',1,'delimiter',' ','MultipleDelimsAsOne',1);
 		S.spin_typ = C_param{1};

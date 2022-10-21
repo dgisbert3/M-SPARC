@@ -17,7 +17,7 @@ function [S] = poissonSolve(S, poisson_tol, Isguess)
 t1 = tic;
 
 if S.cell_typ < 3
-	f = poisson_RHS(S);
+ 	f = poisson_RHS(S);
 else 
 	f = -4*pi*(S.rho(:,1)+S.b);
 end
@@ -96,6 +96,8 @@ elseif S.BC == 3
 	gridsizes = [S.Nx, S.Ny, S.Nz];
 	meshsizes = [S.dx, S.dy, S.dz];
 	bcs       = [S.BCx,S.BCy,S.BCz];
+    ef_type   = [S.EF_TYPEx,S.EF_TYPEy,S.EF_TYPEz];
+    ef_value  = [S.EFx,S.EFy,S.EFz];
 
 	% find which direction has Dirichlet BC
 	dir_Z = find(bcs == 1); 
@@ -137,9 +139,19 @@ elseif S.BC == 3
 	ZZp = abs(colminusrow(Z_bc.', Z)); 
 
 	% V_av(Z) = int (rho_Z_av * |Z - Z'|) dZ', note this can be simplified
-	% for charge neutrual systems to int (rho_Z_av * Z') dZ', indep of Z
+	% for charge neutral systems to int (rho_Z_av * Z') dZ', indep of Z
 	V_Z_av = (-2*pi/A_XY*dZ) * sum(bsxfun(@times, rho_Z_av', ZZp),2);
-
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%   ELECTRIC  FIELD   %%%%%%%%%%%%%%%%%%%%%%%%% 
+    E_Z = 0;                                      %
+    if ef_type(dir_Z)==1                          % Nearby capacitor
+        E_Z = E_Z + (V_Z_av(end)-V_Z_av(1))/LZ;   %   Revert macroscopic electric field Z that naturally arises
+    end                                           %
+    E_Z = E_Z + ef_value(dir_Z);                  % Add user-defined field
+                                                  %
+    V_Z_av = V_Z_av - (Z_bc(:)-mean(Z_bc)) * E_Z; % Adding linear term to V_Z_av
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
 	% wave vectors
 	GX = ifftshift( -floor(NX/2) : ceil(NX/2)-1 ) * (2*pi/NX);
 	GY = ifftshift( -floor(NY/2) : ceil(NY/2)-1 ) * (2*pi/NY);

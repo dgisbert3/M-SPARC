@@ -367,6 +367,23 @@ else
 	S.BCx = 0; S.BCy = 0; S.BCz = 0;
 end 
 
+% Electric field
+if S.BCx == 0 % Periodic. Make sure electric field is 0
+    if not(S.EF_TYPEx == 0 && S.EFx == 0)
+        error(' Electric field along periodic direction (x) must be 0');
+    end
+end
+if S.BCy == 0 % Periodic. Make sure electric field is 0
+    if not(S.EF_TYPEy == 0 && S.EFy == 0)
+        error(' Electric field along periodic direction (y) must be 0');
+    end
+end
+if S.BCz == 0 % Periodic. Make sure electric field is 0
+    if not(S.EF_TYPEz == 0 && S.EFz == 0)
+        error(' Electric field along periodic direction (z) must be 0');
+    end
+end
+
 L1 = S.L1; L2 = S.L2; L3 = S.L3;
 
 % S.Nx, S.Ny, S.Nz is number of intervals now
@@ -1046,11 +1063,24 @@ Nelectron = 0;
 % n_typ: number of atom types
 n_typ = 0;
 
+% Electric field type:
+% 0 - External field (Freestanding or far-away capacitor)
+% 1 - Macroscopic field (Nearby capacitor)
+EF_TYPEx = 0;
+EF_TYPEy = 0;
+EF_TYPEz = 0;
+
+% Electric field value: Zero
+EFx = 0.0;
+EFy = 0.0;
+EFz = 0.0;
+
 S = struct(...
 	'cell_typ',cell_typ,'lat_vec',lat_vec,'metric_T',metric_T,...
 	'grad_T',grad_T, 'lapc_T',lapc_T,'Jacb',Jacb,'L1',L1,'L2',L2,'L3',L3,...
 	'Nx',Nx,'Ny',Ny,'Nz',Nz,'N',N,'ecut',ecut,'mesh_spacing',mesh_spacing,'kptgrid',kptgrid,...
 	'kptshift',kptshift,'nkpt',nkpt,'tnkpt',tnkpt,'wkpt',wkpt,'BC',BC,'BCx',BCx,'BCy',BCy,'BCz',BCz,...
+    'EFx',EFx,'EFy',EFy,'EFz',EFz,'EF_TYPEx',EF_TYPEx,'EF_TYPEy',EF_TYPEy,'EF_TYPEz',EF_TYPEz,...
 	'isBS',isBS,'lattice',lattice,'SCF_tol',SCF_tol,'Nev',Nev,'poisson_tol',poisson_tol,...
 	'pseudocharge_tol',pseudocharge_tol, 'Cst',Cst,'kB',kB,'elec_T_type',elec_T_type,...
 	'Temp',Temp,'bet',bet,'npl',npl,'FDn',FDn,...
@@ -1245,6 +1275,13 @@ fprintf(fileID,' %s',str_BC(S.BCx+1));
 fprintf(fileID,' %s',str_BC(S.BCy+1));
 fprintf(fileID,' %s',str_BC(S.BCz+1));
 fprintf(fileID,'\n');
+
+% Electric field
+str_EF = { '-', '-', 'External', 'Macroscopic'};
+fprintf(fileID,'ELEC_FIELD_X: %+11s: %+.15f\n',str_EF{S.EF_TYPEx+1+2*S.BCx},S.EFx);
+fprintf(fileID,'ELEC_FIELD_Y: %+11s: %+.15f\n',str_EF{S.EF_TYPEy+1+2*S.BCy},S.EFy);
+fprintf(fileID,'ELEC_FIELD_Z: %+11s: %+.15f\n',str_EF{S.EF_TYPEz+1+2*S.BCz},S.EFz);
+
 if (S.BC==2 || S.BC==3 || S.BC==4)
 	fprintf(fileID,'KPOINT_GRID: %d %d %d\n',S.nkpt);
 	fprintf(fileID,'KPOINT_SHIFT: %d %d %d\n',S.kptshift);

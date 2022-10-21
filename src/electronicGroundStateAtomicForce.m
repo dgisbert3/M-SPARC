@@ -188,6 +188,37 @@ AtmForce = reshape(S.force',[],1);
 AtmForce = - AtmForce;
 
 
+% Electric field
+t1     = tic;
+
+phi_av_x = squeeze(mean(mean(reshape(S.phi,S.Nx,S.Ny,S.Nz),2),3));
+phi_av_y = squeeze(mean(mean(reshape(S.phi,S.Nx,S.Ny,S.Nz),1),3));
+phi_av_z = squeeze(mean(mean(reshape(S.phi,S.Nx,S.Ny,S.Nz),1),2));
+
+EF_External       = [0,0,0];
+if S.BCx, EF_External(1)    = -(phi_av_x(end)-phi_av_x(end-1))/S.dx; end % Approximate
+if S.BCy, EF_External(2)    = -(phi_av_y(end)-phi_av_y(end-1))/S.dy; end % Approximate
+if S.BCz, EF_External(3)    = -(phi_av_z(end)-phi_av_z(end-1))/S.dz; end % Approximate
+
+EF_Macroscopic    = [0,0,0];
+if S.BCx, EF_Macroscopic(1) = -(phi_av_x(end)-phi_av_x(1    ))/S.L1; end
+if S.BCy, EF_Macroscopic(2) = -(phi_av_y(end)-phi_av_y(1    ))/S.L2; end
+if S.BCz, EF_Macroscopic(3) = -(phi_av_z(end)-phi_av_z(1    ))/S.L3; end
+
+fprintf(' ***********************************************************\n');
+fprintf(' *                     Electric field                      *\n');
+fprintf(' ***********************************************************\n');
+fprintf('Electric Field (External)          :\n');disp(EF_External);
+fprintf('Electric Field (Macroscopic)       :\n');disp(EF_Macroscopic);
+fprintf('\n Time for calculating electric field: %f s.\n\n', toc(t1));
+
+fileID = fopen(outfname,'a');
+fprintf(fileID, 'Electric Field (External)          :\n'               );
+fprintf(fileID,'%18.10f %18.10f %18.10f (Ha/e/Bohr)  \n',EF_External   );
+fprintf(fileID, 'Electric Field (Macroscopic)       :\n'               );
+fprintf(fileID,'%18.10f %18.10f %18.10f (Ha/e/Bohr)  \n',EF_Macroscopic);
+fclose(fileID);
+
 % Perform stress and pressure calculation
 if S.Calc_stress
 	t1 = tic;
