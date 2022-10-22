@@ -1,10 +1,9 @@
-function [Cm,Sm] = cylindricalHarmonics_inPlane(X,Y,Lz,m)
-% @brief    cylindricalHarmonics_inPlane(X,Y,Lz,m) calculates the cylindrical harmonics
+function [Cm,Sm] = cylindricalHarmonics_inPlane(X,Y,m)
+% @brief    cylindricalHarmonics_inPlane(X,Y,m) calculates the cylindrical harmonics
 %           Cm,Sm (real) at the given positions (X,Y) in plane
 %
 % @param X      The x coordinates of the positions in the x-y plane
 % @param Y      The y coordinates of the positions in the x-y plane
-% @param Lz     The z (axial) length of the periodic domain 
 % @param m      The index for the sum in angular direction (cos and sin)
 %
 % @authors  David Codony <dgisbert3@gatech.edu>
@@ -13,23 +12,17 @@ function [Cm,Sm] = cylindricalHarmonics_inPlane(X,Y,Lz,m)
 % @copyright (c) 2022 Material Physics & Mechanics Group, Georgia Tech
 %============================================================================================
 
-if (Lz <= 0)
-	error('cylindricalHarmonics_inPlane(X,Y,Lz,m): <Lz> must be positive');
-end
-
 isInt = m - round(m);
 if (isInt ~= 0)||(m < 0)
 	error('cylindricalHarmonics_inPlane(X,Y,Lz,m): <m> must be a positive integer');
 end
-
-
 
 r = sqrt(X.^2 + Y.^2);
 
 cosXY = X./r;
 sinXY = Y./r;
 
-c  = 0.398942280401433/Lz^0.5; % 1/sqrt(2*pi*Lz)
+c  = 0.398942280401433; % 1/sqrt(2*pi)
 
 switch m
     case 1

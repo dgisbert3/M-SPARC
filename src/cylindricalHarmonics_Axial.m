@@ -1,6 +1,6 @@
 function [BCn,BSn] = cylindricalHarmonics_Axial(Z,Lz,n)
-% @brief    cylindricalHarmonics(X,Y,Z,m,n,kind) calculates the cylindrical harmonics
-%           BCn,BSn (real) at the given positions (X,Y,Z)
+% @brief    cylindricalHarmonics_Axial(Z,Lz,n) calculates the cylindrical harmonics
+%           BCn,BSn (real) at the given positions (Z) in axial direction
 %
 % @param Z      The z (axial) coordinates of the grid 
 % @param Lz     The z (axial) length of the periodic domain 
@@ -16,13 +16,13 @@ if (Lz <= 0)
 	error('cylindricalHarmonics_Axial(Z,Lz,n): <Lz> must be positive');
 end
 
-isInt = n - round(l);
+isInt = n - round(n);
 if (isInt ~= 0)||(n < 0)
 	error('cylindricalHarmonics_Axial(Z,Lz,n): <n> must be a positive integer');
 end
 
 
-theta = 2*pi*n*Z/Lz ;
+theta = 2*pi*n*Z(:)/Lz ;
 
 c = 0.564189583547756/Lz^0.5; % 1/sqrt(pi*Lz)
 

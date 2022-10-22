@@ -133,19 +133,23 @@ elseif S.BC == 3
 	rho_Z_av = rho_Z_av(:);
 	Z = (0 : NZ-1) * dZ;
 	Z_bc = [-S.FDn:-1,NZ:NZ+S.FDn-1] * dZ;
-
+    
 	% a matrix of size Nz' x Nz', a(i,j) =  z_i - z_j
 	%ZZp = abs(Z_bc.' - Z); 
 	ZZp = abs(colminusrow(Z_bc.', Z)); 
-
+	
 	% V_av(Z) = int (rho_Z_av * |Z - Z'|) dZ', note this can be simplified
 	% for charge neutral systems to int (rho_Z_av * Z') dZ', indep of Z
-	V_Z_av = (-2*pi/A_XY*dZ) * sum(bsxfun(@times, rho_Z_av', ZZp),2);
+	V_Z_av = (-2*pi/A_XY*dZ) * sum(bsxfun(@times, rho_Z_av', ZZp),2);    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%   ELECTRIC  FIELD   %%%%%%%%%%%%%%%%%%%%%%%%% 
     E_Z = 0;                                      %
     if ef_type(dir_Z)==1                          % Nearby capacitor
-        E_Z = E_Z + (V_Z_av(end)-V_Z_av(1))/LZ;   %   Revert macroscopic electric field Z that naturally arises
+        % Compute voltage drop at both sides
+        ZZ_drop = abs(colminusrow([0,NZ-1]' * dZ, Z)); 
+        Vdrop_Z = (-2*pi/A_XY*dZ) * sum(bsxfun(@times, rho_Z_av', ZZ_drop),2);
+        % Revert macroscopic electric field Z that naturally arises
+        E_Z = E_Z + diff(Vdrop_Z)/LZ;             
     end                                           %
     E_Z = E_Z + ef_value(dir_Z);                  % Add user-defined field
                                                   %
@@ -179,79 +183,88 @@ elseif S.BC == 3
 	phi = real(phi);
 	phi = permute(phi,reverse_order);
 elseif S.BC == 4
-	% find boundary conditions for periodic in 1D, dirichlet in 2D
-	% Calculate phi
-	phi = zeros(S.Nx+2*S.FDn, S.Ny+2*S.FDn, S.Nz+2*S.FDn);
+    
+    % % % %     % find boundary conditions for periodic in 1D, dirichlet in 2D
+    % % % %     % Calculate phi
+    % % % %
+    % % % %     phi = zeros(S.Nx+2*S.FDn, S.Ny+2*S.FDn, S.Nz+2*S.FDn);
+    % % % %
+    % % % %     cellsize  = [S.L1, S.L2, S.L3];
+    % % % %     gridsizes = [S.Nx, S.Ny, S.Nz];
+    % % % %     meshsizes = [S.dx, S.dy, S.dz];
+    % % % %     bcs       = [S.BCx,S.BCy,S.BCz];
+    % % % %
+    % % % %     % find which direction has Periodic BC
+    % % % %     dir_Z = find(bcs == 0);
+    % % % %     dir_X = mod(dir_Z, 3) + 1;
+    % % % %     dir_Y = mod(dir_X, 3) + 1;
+    % % % %
+    % % % %     % once we find the direction, we assume that direction is the Z
+    % % % %     % direction, the other two directions are then called X, Y
+    % % % %     NX = gridsizes(dir_X); NY = gridsizes(dir_Y); NZ = gridsizes(dir_Z);
+    % % % %     LX = cellsize(dir_X);  LY = cellsize(dir_Y);  LZ = cellsize(dir_Z);
+    % % % %     dX = meshsizes(dir_X); dY = meshsizes(dir_Y); dZ = meshsizes(dir_Z);
+    % % % %     % A_XY = LX * LY; % area of (x',y') surface
+    % % % %
+    % % % % 	% reshape rho to 3D
+    % % % % 	rho = reshape(rho+S.b, S.Nx, S.Ny, S.Nz); % note here after rho = rho + b
+    % % % %
+    % % % % 	% permute rho so that the new Z direction has Periodic BC
+    % % % %     new_order = [dir_X, dir_Y, dir_Z]; % a permutation of [1,2,3]
+    % % % %     [~, reverse_order] = sort(new_order); % reverse order to get back
+    % % % % 	rho = permute(rho,new_order);
+    % % % % 	phi = permute(phi,new_order);
+    % % % % 	% rho = permute(rho,reverse_order); % this will recover original
+    % % % %
+    % % % % 	% sum over Z direction, \int (\rho) dz / LZ
+    % % % % 	rho_XY_av = sum(rho,3) * (dZ/LZ); % NX * NY
+    % % % % 	rho_XY_av = rho_XY_av(:);
+    % % % % 	X = (0 : NX-1) * dX;
+    % % % % 	Y = (0 : NY-1) * dY;
+    % % % %
+    % % % % 	[XX,YY] = ndgrid(X,Y);
+    % % % %
+    % % % % 	I_ex = 1:NX+2*S.FDn;
+    % % % % 	J_ex = 1:NY+2*S.FDn;
+    % % % % 	[II_ex,JJ_ex] = ndgrid(I_ex,J_ex);
+    % % % %
+    % % % % 	% flag for points inside the domain
+    % % % % 	% isIn = ones(NX+2*S.FDn,NY+2*S.FDn);
+    % % % % 	% isIn(1:S.FDn,:) = 0;
+    % % % % 	% isIn(:,1:S.FDn) = 0;
+    % % % % 	% isIn(S.FDn+NX+1:end,:) = 0;
+    % % % % 	% isIn(:,S.FDn+NY+1:end) = 0;
+    % % % % 	isIn = zeros(NX+2*S.FDn,NY+2*S.FDn);
+    % % % % 	isIn(S.FDn+1:NX+S.FDn, S.FDn+1:NY+S.FDn) = 1;
+    % % % %
+    % % % % 	% positions of nodes outside the domain
+    % % % % 	isbc = find(~isIn);
+    % % % %
+    % % % % 	XX_bc = (II_ex(isbc)-1-S.FDn) * dX;
+    % % % % 	YY_bc = (JJ_ex(isbc)-1-S.FDn) * dY;
+    % % % %
+    % % % % 	% ln((X-X')^2 + (Y-Y')^2)
+    % % % % 	% ln_RRp = log((XX_bc - XX(:)').^2 + (YY_bc - YY(:)').^2 );
+    % % % % 	ln_RRp = log(colminusrow(XX_bc,XX(:)').^2 + colminusrow(YY_bc,YY(:)').^2);
+    % % % %
+    % % % % 	% V_XY_av = int (-ln((X-X')^2 + (Y-Y')^2) * rho_XY_av) dX'dY'
+    % % % % 	V_XY_av = (-dX*dY) * sum(bsxfun(@times, rho_XY_av', ln_RRp),2);
+    % % % %
+    % % % % 	V_XY_av_full = zeros(NX+2*S.FDn,NY+2*S.FDn);
+    % % % % 	V_XY_av_full(isbc) = V_XY_av;
+    % % % %
+    % % % % 	phi = bsxfun(@plus, phi, V_XY_av_full);
+    % % % %
+    % % % % 	% permute phi back to original directions
+    % % % % 	phi = real(phi);
+    % % % % 	phi = permute(phi,reverse_order);
 
-	cellsize  = [S.L1, S.L2, S.L3];
-	gridsizes = [S.Nx, S.Ny, S.Nz];
-	meshsizes = [S.dx, S.dy, S.dz];
-	bcs       = [S.BCx,S.BCy,S.BCz];
-
-	% find which direction has Periodic BC
-	dir_Z = find(bcs == 0); 
-	dir_X = mod(dir_Z, 3) + 1;
-	dir_Y = mod(dir_X, 3) + 1;
-
-	% once we find the direction, we assume that direction is the Z
-	% direction, the other two directions are then called X, Y
-	NX = gridsizes(dir_X); NY = gridsizes(dir_Y); NZ = gridsizes(dir_Z);
-	LX = cellsize(dir_X);  LY = cellsize(dir_Y);  LZ = cellsize(dir_Z);
-	dX = meshsizes(dir_X); dY = meshsizes(dir_Y); dZ = meshsizes(dir_Z);
-	% A_XY = LX * LY; % area of (x',y') surface
-
-	% reshape rho to 3D 
-	rho = reshape(rho+S.b, S.Nx, S.Ny, S.Nz); % note here after rho = rho + b
-
-	% permute rho so that the new Z direction has Periodic BC
-	new_order = [dir_X, dir_Y, dir_Z]; % a permutation of [1,2,3]
-	[~, reverse_order] = sort(new_order); % reverse order to get back
-	rho = permute(rho,new_order);
-	phi = permute(phi,new_order);
-	% rho = permute(rho,reverse_order); % this will recover original
-
-	% sum over Z direction, \int (\rho) dz / LZ
-	rho_XY_av = sum(rho,3) * (dZ/LZ); % NX * NY
-	rho_XY_av = rho_XY_av(:);
-	X = (0 : NX-1) * dX;
-	Y = (0 : NY-1) * dY;
-
-	[XX,YY] = ndgrid(X,Y);
-
-	I_ex = 1:NX+2*S.FDn;
-	J_ex = 1:NY+2*S.FDn;
-	[II_ex,JJ_ex] = ndgrid(I_ex,J_ex);
-
-	% flag for points inside the domain
-	% isIn = ones(NX+2*S.FDn,NY+2*S.FDn);
-	% isIn(1:S.FDn,:) = 0;
-	% isIn(:,1:S.FDn) = 0;
-	% isIn(S.FDn+NX+1:end,:) = 0;
-	% isIn(:,S.FDn+NY+1:end) = 0;
-	isIn = zeros(NX+2*S.FDn,NY+2*S.FDn);
-	isIn(S.FDn+1:NX+S.FDn, S.FDn+1:NY+S.FDn) = 1;
-
-	% positions of nodes outside the domain
-	isbc = find(~isIn);
-
-	XX_bc = (II_ex(isbc)-1-S.FDn) * dX;
-	YY_bc = (JJ_ex(isbc)-1-S.FDn) * dY;
-
-	% ln((X-X')^2 + (Y-Y')^2)
-	% ln_RRp = log((XX_bc - XX(:)').^2 + (YY_bc - YY(:)').^2 );
-	ln_RRp = log(colminusrow(XX_bc,XX(:)').^2 + colminusrow(YY_bc,YY(:)').^2);
-	
-	% V_XY_av = int (-ln((X-X')^2 + (Y-Y')^2) * rho_XY_av) dX'dY'
-	V_XY_av = (-dX*dY) * sum(bsxfun(@times, rho_XY_av', ln_RRp),2);
-
-	V_XY_av_full = zeros(NX+2*S.FDn,NY+2*S.FDn);
-	V_XY_av_full(isbc) = V_XY_av;
-
-	phi = bsxfun(@plus, phi, V_XY_av_full);
-
-	% permute phi back to original directions
-	phi = real(phi);
-	phi = permute(phi,reverse_order);
+    % New implementation by David Codony, after expansion of the log term,
+    % and introducing higher order (modified Bessel of second kind) terms
+	m_cut = 10; %(log, in-plane)
+    n_cut = 0; %(bessel, axial)
+    phi = boundaryConditions_Wire(rho,S,m_cut,n_cut);
+    
 end
 
 % Calculate boundary conditions, this part can be combined for 2D
