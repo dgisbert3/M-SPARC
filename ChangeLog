@@ -1,4 +1,9 @@
 ----------------
+Oct 26, 2022
+Name: David Codony
+* Fix a bug in relaxation when LBFGS converges in 1 step.
+
+----------------
 Oct 16, 2022
 Name: Boqin Zhang
 * Add missed NLCC into vdW-DF and SCAN
