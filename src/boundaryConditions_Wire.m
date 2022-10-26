@@ -8,7 +8,7 @@ function phi = boundaryConditions_Wire(rho,S,m_cut,n_cut)
         m_cut = 6; % Default value for in-plane terms
     end
     if nargin<4
-        n_cut = 6; % Default value for axial terms
+        n_cut = 0; % Default value for axial terms
     end
     
 	% Calculate phi
@@ -127,6 +127,7 @@ function phi = boundaryConditions_Wire(rho,S,m_cut,n_cut)
 
         % Revert macroscopic electric field Z that naturally arises
         E_X = E_X + diff(Vdrop_X)/LX;             
+        S.EF_External(dir_X) = diff(Vdrop_X)/LX;
     end
     
     if ef_type(dir_Y)==1                          % Nearby capacitor
@@ -147,10 +148,13 @@ function phi = boundaryConditions_Wire(rho,S,m_cut,n_cut)
 
         % Revert macroscopic electric field Z that naturally arises
         E_Y = E_Y + diff(Vdrop_Y)/LY;             
+        S.EF_External(dir_Y) = diff(Vdrop_Y)/LY;
     end   
     
 	E_X = E_X + ef_value(dir_X);                  % Add user-defined field
 	E_Y = E_Y + ef_value(dir_Y);                  % Add user-defined field
+    S.EF_External(dir_X) = S.EF_External(dir_X) + ef_value(dir_X);
+    S.EF_External(dir_Y) = S.EF_External(dir_Y) + ef_value(dir_Y);
     
     % Add linear fields
     V_XY = V_XY - (XX_bc(:)-mean(XX_bc)) * E_X;

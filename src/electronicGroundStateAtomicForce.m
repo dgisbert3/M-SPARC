@@ -189,34 +189,36 @@ AtmForce = - AtmForce;
 
 
 % Electric field
-t1     = tic;
 
-phi_av_x = squeeze(mean(mean(reshape(S.phi,S.Nx,S.Ny,S.Nz),2),3));
-phi_av_y = squeeze(mean(mean(reshape(S.phi,S.Nx,S.Ny,S.Nz),1),3));
-phi_av_z = squeeze(mean(mean(reshape(S.phi,S.Nx,S.Ny,S.Nz),1),2));
-
-EF_External       = [0,0,0];
-if S.BCx, EF_External(1)    = -(phi_av_x(end)-phi_av_x(end-1))/S.dx; end % Approximate
-if S.BCy, EF_External(2)    = -(phi_av_y(end)-phi_av_y(end-1))/S.dy; end % Approximate
-if S.BCz, EF_External(3)    = -(phi_av_z(end)-phi_av_z(end-1))/S.dz; end % Approximate
-
-EF_Macroscopic    = [0,0,0];
-if S.BCx, EF_Macroscopic(1) = -(phi_av_x(end)-phi_av_x(1    ))/S.L1; end
-if S.BCy, EF_Macroscopic(2) = -(phi_av_y(end)-phi_av_y(1    ))/S.L2; end
-if S.BCz, EF_Macroscopic(3) = -(phi_av_z(end)-phi_av_z(1    ))/S.L3; end
+switch sum([S.BCx,S.BCy,S.BCz])
+    case 0
+        Polarization_Units = 'e/Bohr^2';
+        Polarization_Text  = 'per unit volume';
+    case 1
+        Polarization_Units = 'e/Bohr';
+        Polarization_Text  = 'per unit area';
+    case 2
+        Polarization_Units = 'e';
+        Polarization_Text  = 'per unit length';
+    case 3
+        Polarization_Units = 'e*Bohr';
+        Polarization_Text  = 'total dipole';
+end
 
 fprintf(' ***********************************************************\n');
-fprintf(' *                     Electric field                      *\n');
+fprintf(' *                     Electrostatics                      *\n');
 fprintf(' ***********************************************************\n');
-fprintf('Electric Field (External)          :\n');disp(EF_External);
-fprintf('Electric Field (Macroscopic)       :\n');disp(EF_Macroscopic);
-fprintf('\n Time for calculating electric field: %f s.\n\n', toc(t1));
+fprintf('Electric Field (     External)    (Ha/e/Bohr):\n');disp(S.EF_External);
+fprintf('Electric Field (  Macroscopic) (Ha/e/Bohr):\n');disp(S.EF_Macroscopic);
+fprintf('Polarization (%15s) (%9s):\n',Polarization_Text,Polarization_Units);disp(S.Polarization);
 
 fileID = fopen(outfname,'a');
-fprintf(fileID, 'Electric Field (External)          :\n'               );
-fprintf(fileID,'%18.10f %18.10f %18.10f (Ha/e/Bohr)  \n',EF_External   );
-fprintf(fileID, 'Electric Field (Macroscopic)       :\n'               );
-fprintf(fileID,'%18.10f %18.10f %18.10f (Ha/e/Bohr)  \n',EF_Macroscopic);
+fprintf(fileID, 'Electric Field (     External)       :\n'                 );
+fprintf(fileID,'%18.10f %18.10f %18.10f (Ha/e/Bohr)  \n',S.EF_External   );
+fprintf(fileID, 'Electric Field (  Macroscopic)       :\n'                 );
+fprintf(fileID,'%18.10f %18.10f %18.10f (Ha/e/Bohr)  \n',S.EF_Macroscopic);
+fprintf(fileID, 'Polarization (%15s)       :\n',Polarization_Text);
+fprintf(fileID,'%18.10f %18.10f %18.10f (%s)  \n',S.Polarization,Polarization_Units);
 fclose(fileID);
 
 % Perform stress and pressure calculation

@@ -17,7 +17,8 @@ function [S] = poissonSolve(S, poisson_tol, Isguess)
 t1 = tic;
 
 if S.cell_typ < 3
- 	f = poisson_RHS(S);
+%  	f = poisson_RHS(S);
+    [f,S.EF_External] = poisson_RHS(S);
 else 
 	f = -4*pi*(S.rho(:,1)+S.b);
 end
@@ -46,14 +47,17 @@ end
 % assert(conv_flag==0,'Electrostatic Poisson solve did not converge')
 % S_Debug.relax(S.Relax_iter).poisson_flag_init = conv_flag;
 
+% Compute macroscopic electric field and polarization
+S = ComputeElectrostatics(S,S.phi);
+
 fprintf(' Poisson problem took %fs\n',toc(t1));
 
 end
 
 
-function f = poisson_RHS(S)
+function [f,EF_External] = poisson_RHS(S)
 % @brief	Poisson_RHS evaluates the right hand side of the poisson equation, 
-%           including the boundary condtions, i.e. f = -4 * pi * ( rho + b - d) 
+%           including the boundary conditions, i.e. f = -4 * pi * ( rho + b - d) 
 %           for cluster system, while for periodic system it's just 
 %           f = -4 * pi * (rho + b).
 rho = S.rho(:,1);
@@ -67,6 +71,8 @@ if S.NetCharge ~= 0
 	% fprintf(2,'total charge + background charge = %d\n',dot(S.W,rho+S.b+unif_bkgd_chrg));
 end
 
+EF_External = zeros(1,3);
+    
 if(S.BC == 1)
 	% For cluster systems, we need to include boundary conditions d
 	% RR = S.RR_AUG(S.isIn);
@@ -84,9 +90,64 @@ if(S.BC == 1)
 		end
 	end
 	phi = 4 * pi * phi;
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%   ELECTRIC  FIELD   %%%%%%%%%%%%%%%%%%%%%%%%% 
+    E_X = 0;
+    E_Y = 0;
+    E_Z = 0;   
+    
+    if S.EF_TYPEx    % Nearby capacitor
+        % Compute voltage drop at both sides
+        phi1 = mean(mean(phi(      S.FDn,1+S.FDn:end-S.FDn,1+S.FDn:end-S.FDn),2),3);
+        phi2 = mean(mean(phi(end+1-S.FDn,1+S.FDn:end-S.FDn,1+S.FDn:end-S.FDn),2),3);
+        Vdrop = [ phi1 , phi2 ];
+        % Revert macroscopic electric field X that naturally arises
+        E_X = E_X + diff(Vdrop)/S.L1;             
+        EF_External(1) = diff(Vdrop)/S.L1;
+    end
+    if S.EF_TYPEy    % Nearby capacitor
+        % Compute voltage drop at both sides
+        phi1 = mean(mean(phi(1+S.FDn:end-S.FDn,      S.FDn,1+S.FDn:end-S.FDn),1),3);
+        phi2 = mean(mean(phi(1+S.FDn:end-S.FDn,end+1-S.FDn,1+S.FDn:end-S.FDn),1),3);
+        Vdrop = [ phi1 , phi2 ];
+        % Revert macroscopic electric field X that naturally arises
+        E_Y = E_Y + diff(Vdrop)/S.L2;             
+        EF_External(2) = diff(Vdrop)/S.L2;
+    end
+    if S.EF_TYPEz    % Nearby capacitor
+        % Compute voltage drop at both sides
+        phi1 = mean(mean(phi(1+S.FDn:end-S.FDn,1+S.FDn:end-S.FDn,      S.FDn),1),2);
+        phi2 = mean(mean(phi(1+S.FDn:end-S.FDn,1+S.FDn:end-S.FDn,end+1-S.FDn),1),2);
+        Vdrop = [ phi1 , phi2 ];
+        % Revert macroscopic electric field X that naturally arises
+        E_Z = E_Z + diff(Vdrop)/S.L3;             
+        EF_External(3) = diff(Vdrop)/S.L3;
+    end
+    %
+    E_X = E_X + S.EFx;                            % Add user-defined field
+    E_Y = E_Y + S.EFy;                            % Add user-defined field
+    E_Z = E_Z + S.EFz;                            % Add user-defined field
+    EF_External(1) = EF_External(1) + S.EFx;
+    EF_External(2) = EF_External(2) + S.EFy;
+    EF_External(3) = EF_External(3) + S.EFz;
+    
+    X = (0 : S.Nx-1+2*S.FDn) * S.dz ;
+    Y = (0 : S.Ny-1+2*S.FDn) * S.dy ;
+    Z = (0 : S.Nz-1+2*S.FDn) * S.dz ;
+    
+    V_X_av = permute( -(X(:)-mean(X)) * E_X , [1,2,3] ); % Adding linear term to V_X_av
+    V_Y_av = permute( -(Y(:)-mean(Y)) * E_Y , [2,1,3] ); % Adding linear term to V_Y_av
+    V_Z_av = permute( -(Z(:)-mean(Z)) * E_Z , [2,3,1] ); % Adding linear term to V_Z_av
+    
+    phi = bsxfun(@plus,phi,V_X_av);
+    phi = bsxfun(@plus,phi,V_Y_av);
+    phi = bsxfun(@plus,phi,V_Z_av);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
 	phi(S.isIn) = 0;
 elseif S.BC == 2
-	return;
+    return;
 elseif S.BC == 3
 	% find boundary conditions for periodic in 2D, dirichlet in 1D
 	% Calculate phi
@@ -150,9 +211,11 @@ elseif S.BC == 3
         Vdrop_Z = (-2*pi/A_XY*dZ) * sum(bsxfun(@times, rho_Z_av', ZZ_drop),2);
         % Revert macroscopic electric field Z that naturally arises
         E_Z = E_Z + diff(Vdrop_Z)/LZ;             
+        EF_External(dir_Z) = diff(Vdrop_Z)/LZ;
     end                                           %
     E_Z = E_Z + ef_value(dir_Z);                  % Add user-defined field
-                                                  %
+    EF_External(dir_Z) = EF_External(dir_Z) + ef_value(dir_Z);
+    
     V_Z_av = V_Z_av - (Z_bc(:)-mean(Z_bc)) * E_Z; % Adding linear term to V_Z_av
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
@@ -260,11 +323,12 @@ elseif S.BC == 4
     % % % % 	phi = permute(phi,reverse_order);
 
     % New implementation by David Codony, after expansion of the log term,
-    % and introducing higher order (modified Bessel of second kind) terms
-	m_cut = 10; %(log, in-plane)
-    n_cut = 0; %(bessel, axial)
-    phi = boundaryConditions_Wire(rho,S,m_cut,n_cut);
+    % and introducing higher order (modified Bessel of second kind) terms,
+    % as well as electric field
     
+	m_cut = 6; % HARDCODED (log, in-plane)
+    n_cut = 0; % HARDCODED (bessel, axial)
+    phi = boundaryConditions_Wire(rho,S,m_cut,n_cut);
 end
 
 % Calculate boundary conditions, this part can be combined for 2D
@@ -299,6 +363,43 @@ f = f + d;
 
 end
 
+
+function S = ComputeElectrostatics(S,phi)
+S.EF_Macroscopic = [0,0,0];
+S.Polarization   = [0,0,0];
+W = S.L1*S.L2*S.L3;
+
+phi = reshape(phi,S.Nx,S.Ny,S.Nz);
+phi_av_x = squeeze(mean(mean(phi,2),3));
+phi_av_y = squeeze(mean(mean(phi,1),3));
+phi_av_z = squeeze(mean(mean(phi,1),2));
+
+rho = reshape(S.rho(:,1)+S.b,S.Nx,S.Ny,S.Nz);
+rho_av_x = squeeze(sum(sum(rho,2),3))*S.dV;
+rho_av_y = squeeze(sum(sum(rho,1),3))*S.dV;
+rho_av_z = squeeze(sum(sum(rho,1),2))*S.dV;
+
+X = (0 : S.Nx-1) * S.dx ;
+Y = (0 : S.Ny-1) * S.dy ;
+Z = (0 : S.Nz-1) * S.dz ;
+    
+if S.BCx
+    S.EF_Macroscopic(1) = -(phi_av_x(end)-phi_av_x(1))/S.L1;
+    S.Polarization(1)   = X*rho_av_x(:);
+    W = W/S.L1;
+end
+if S.BCy
+    S.EF_Macroscopic(2) = -(phi_av_y(end)-phi_av_y(1))/S.L2;
+    S.Polarization(2)   = Y*rho_av_y(:);
+    W = W/S.L2;
+end
+if S.BCz
+    S.EF_Macroscopic(3) = -(phi_av_z(end)-phi_av_z(1))/S.L3;
+    S.Polarization(3)   = Z*rho_av_z(:);
+    W = W/S.L3;
+end
+S.Polarization = S.Polarization / W; % Normalized per volume, area or length, etc...
+end
 
 
 % tool function colminusrow
