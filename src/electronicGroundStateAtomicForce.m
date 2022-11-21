@@ -238,7 +238,7 @@ if S.Calc_stress
 	if (fileID == -1) 
 		error('\n Cannot open file "%s"\n',outfname);
 	end
-	if (S.MDFlag == 0 && S.RelaxFlag == 0)
+	if (S.MDFlag == 0) % && S.RelaxFlag == 0)
 		fprintf(fileID, 'Stress (GPa):\n');
 		fprintf(fileID,'%18.10f %18.10f %18.10f\n', sigma_inGPa');
 	end

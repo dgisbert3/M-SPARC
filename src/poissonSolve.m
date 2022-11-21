@@ -170,7 +170,12 @@ elseif S.BC == 3
 	NX = gridsizes(dir_X); NY = gridsizes(dir_Y); NZ = gridsizes(dir_Z);
 	LX = cellsize(dir_X);  LY = cellsize(dir_Y);  LZ = cellsize(dir_Z);
 	dX = meshsizes(dir_X); dY = meshsizes(dir_Y); dZ = meshsizes(dir_Z);
-	A_XY = LX * LY; % area of (x',y') surface
+    
+% % % % % % % % 	A_XY = LX * LY; % area of (x',y') surface
+% % % % % % % % The line above was assuming orthogonal cell. Now we only
+% % % % % % % % assume that dir_Z is orthogonal to the plane
+	A_XY = LX * LY * S.Jacb ; % area of (x',y') surface
+    
 
 	% reshape rho to 3D 
 	rho = reshape(rho+S.b, S.Nx, S.Ny, S.Nz); % note here after rho = rho + b
@@ -190,7 +195,12 @@ elseif S.BC == 3
 	% rho_zp_bar = zeros(Nzp,1);
 	% sum over x' and y' directions, \int (\rho) dxdy
 	%rho_zp_bar = sum(sum(rho, dir_xp), dir_yp) * dxp * dyp; 
-	rho_Z_av = sum(sum(rho, 1), 2) * dX * dY; 
+    
+	% % % % % % % % rho_Z_av = sum(sum(rho, 1), 2) * dX * dY; 
+    % % % % % % % % The line above was assuming orthogonal cell. Now we only
+    % % % % % % % % assume that dir_Z is orthogonal to the plane
+    rho_Z_av = sum(sum(rho, 1), 2) * dX * dY * S.Jacb ; 
+    
 	rho_Z_av = rho_Z_av(:);
 	Z = (0 : NZ-1) * dZ;
 	Z_bc = [-S.FDn:-1,NZ:NZ+S.FDn-1] * dZ;
@@ -367,7 +377,7 @@ end
 function S = ComputeElectrostatics(S,phi)
 S.EF_Macroscopic = [0,0,0];
 S.Polarization   = [0,0,0];
-W = S.L1*S.L2*S.L3;
+W = S.L1*S.L2*S.L3*S.Jacb;
 
 phi = reshape(phi,S.Nx,S.Ny,S.Nz);
 phi_av_x = squeeze(mean(mean(phi,2),3));
